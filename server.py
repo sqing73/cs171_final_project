@@ -10,7 +10,9 @@ MY_ID = ""
 SOCKETS_SEND = {}       # server sockets for send
 #SOCKETS_RECEIVE= {}     server sockets for receive
 SOCKETS_CLIENTS = {}    # clients sockets for send and receive
-
+OPERATIONS = queue.Queue(300)
+STORE = {}
+BLOCKCHIAN = []
 def receive_message(server_receive):
     #global SOCKETS_RECEIVE
     global SOCKETS_CLIENTS
