@@ -3,7 +3,7 @@ import sys
 
 import hashlib
 import json
-
+'''
 blockchain = [Block.get_genesis()]
 store = {}
 
@@ -11,11 +11,11 @@ if sys.argv[1] == "write":
     chain_file = []
 
     for i in range(1, 3):
-        op = "put {}:{}".format(i, i+3)
+        op = "put,{},{}".format(i, i+3)
         block = Block(blockchain[i-1].get_hash(), op)
         blockchain.append(block)
         print("OP: {}, NONCE: {}, PRE_HASH: {}".format(block.operation, block.nonce, block.previous_hash))
-        key_value = op[4:].split(':')
+        key_value = op[4:].split(',')
         key = key_value[0]
         value = key_value[1]
         store[key] = value
@@ -56,4 +56,14 @@ elif sys.argv[1] == "read":
         f.close()
     for key in store:
         print ("{}:{}".format(key, store[key]))
-    
+
+'''
+d = {'1':"shit", "2":"fuck"}
+s = json.dumps(d)
+r = "ssss/" + s
+r = r.split('/')
+#g = dict(r[1])
+
+print(r)
+
+
