@@ -60,10 +60,6 @@ elif sys.argv[1] == "read":
 '''
 d = {'1':"shit", "2":"fuck"}
 s = json.dumps(d)
-r = "ssss/" + s
-r = r.split('/')
-#g = dict(r[1])
-
-print(r)
-
-
+t = "fff"
+if not t:
+    print(1)

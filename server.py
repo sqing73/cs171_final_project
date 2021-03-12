@@ -22,8 +22,8 @@ ACCEPTNUM = []
 ACCEPTVAL = ""
 COUNTACC = 0            # count number of acceptors
 COUNTPRO = 0            # count number of promise
-MYVAL = ""              # sender1(_sender2) block_info
-DECIDING = False
+MYVAL = ""              # sender1(_sender2)/block_info
+DECIDING = None
 # commands for communication between servers, no commands between client and server
 CMD = ["forward", "accept", "accepted"]
 FORMATS = {"forward":"server {}/forward/server {},client {}/{}",# sender id, requestor1 id, requestor2 id, operation
@@ -101,11 +101,28 @@ def receive_message(server_receive, lock):
                         else:
                             requestors = message[2]
                         op = message[-1]
-                        requestors, block_info = generate_value(requestors, op)
+
+                        #requestors, block_info = generate_value(requestors, op)
+                        # use _ to partition two requestors
+                        requestors = requestors.split(",")
+                        requestors = "_".join(requestors)
+                        # convert operation to block info
+                        # if there are operation in queue ahead of this one, its hash should be previous one's
+                        # if no, its hash should be last one in blockchain
+                        prev_hash = ""
+                        if len(OPERATIONS)>0:
+                            prev_block_info = json.loads(OPERATIONS[-1].split("/")[1])
+                            prev_block = Block(prev_block_info["HASH"], prev_block_info["OPERATION"], prev_block_info["ID"], prev_block_info["NONCE"])
+                            prev_hash = prev_block.after_hash
+                        else:
+                            prev_hash = BLOCKCHAIN[-1].after_hash
+                        block = Block(prev_hash, op, operation_id)
+                        block_info = block.toString()
+
                         val = requestors + "/" + block_info
                         OPERATIONS.append(val)
                         if not DECIDING:
-                            DECIDING = True
+                            DECIDING = operation_id
                             MYVAL = val
                             to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, block_info)
                             send_message(to_send)
@@ -127,17 +144,17 @@ def receive_message(server_receive, lock):
                 send_message(to_send, sender_id)
                 lock.release()
         elif cmd == "accepted":
-            if DECIDING:
+            block_info = json.loads(message[-1])
+            if DECIDING == block_info["ID"]:
                 lock.acquire()
                 COUNTACC += 1
                 # reach majority, append block to file 
                 if COUNTACC >= 3:
-                    block_info = json.loads(message[-1])
                     block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"], True)
                     
                     BLOCKCHAIN.append(block)
                     OPERATIONS.pop(0)
-                    DECIDING = False
+                    DECIDING = None
                     COUNTACC = 0
                     MYVAL = ""
                     update_chain_file()
@@ -171,11 +188,12 @@ def receive_message(server_receive, lock):
                     to_send = FORMATS["decide"].format(MY_ID, b, message[-2], message[-1])
                     send_message(to_send)
                     # if there are other operations in queue, start phase 2
-                    if len(OPERATIONS) > 0 and not DECIDING:
-                        DECIDING = True
+                    if len(OPERATIONS) > 0:
                         val = OPERATIONS[0].split("/")
                         requestors = val[0]
                         block_info = val[1]
+                        b = json.loads(block_info)
+                        DECIDING = b["ID"]
                         MYVAL = val
                         to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, block_info)
                         send_message(to_send)
@@ -245,6 +263,7 @@ def receive_message(server_receive, lock):
 '''
 # thread for clearing operations in queue and start from MYVAL
 def generate_value(requestors, operation):
+    global BLOCKCHAIN
     # use _ to partition two requestors
     requestors = requestors.split(",")
     requestors = "_".join(requestors)
@@ -370,6 +389,7 @@ if __name__ == "__main__":
     for block_info in stored:
         # check valid
         #print(block_info)
+        #print(i, len(BLOCKCHAIN))
         prev_hash = BLOCKCHAIN[i-1].after_hash
         stored_hash = block_info["HASH"]
         if prev_hash == stored_hash:

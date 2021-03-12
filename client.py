@@ -66,14 +66,17 @@ if __name__ == '__main__':
     while True:
         inp = input("please input: ")
         #from client: client id/operation:put,key,value,id or get,key,id or leader
-        operation_id = str(randint(0, 500))
+        operation_id = str(randint(0, 1100))
         inp += "," + operation_id
         to_send = "client " + MY_ID + "/" + inp # server 1/put,key,value
         print("send to server {}/{}".format(LEADER, inp))
+        start = time.time()
         time.sleep(4)
         server_sock.send(to_send.encode())
         message = server_sock.recv(1024).decode()
-        print(message)
+        end = time.time()
+
+        print(message, "time:{}".format(end - start))
         #server_sock.settimeout(6) # 6s to time out
         '''
         try:
