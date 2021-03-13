@@ -11,24 +11,28 @@ MY_ID = ""
 SERVER_SOCKETS = {}
 SERVER_IDS = ["1", "2", "3", "4", "5"]
 LEADER = "1" # leader hint, 1 at beginning
+RECEIVED = True
+TIMEOUT = 0
+MESSAGE = ""
+event = threading.Event()
 
 def receive_message(server_sock):
+    global RECEIVED
+    global MESSAGE
     while True:
         message = server_sock.recv(1024).decode()
-        print("receive from " + message)
-    
-def send_message(server_id, message):
-    global SERVER_SOCKETS
-    global MY_ID
-    
-    if server_id == "all":
-        servers = list(SERVER_SOCKETS.values())
-        for server in servers:
-            server.send(message.encode())
-    else:
-        server_sock = SERVER_SOCKETS[server_id]
-        server_sock.send(message.encode())
+        RECEIVED = True
+        event.set()
+        MESSAGE = message
+        #print("receive from " + message)
 
+# thread for timer of a message
+def timer():
+    global TIMEOUT
+    for i in range(30):
+        time.sleep(3)
+        if RECEIVED == True:
+            return 
 
 if __name__ == '__main__':
 
@@ -60,7 +64,8 @@ if __name__ == '__main__':
             break
         except ConnectionRefusedError:
             i += 1
-
+    LEADER = str(i)
+    threading.Thread(target=receive_message, args=(server_sock,)).start()
     #threading.Thread(target=receive_message, args = (server_sock,)).start()
 
     while True:
@@ -71,12 +76,19 @@ if __name__ == '__main__':
         to_send = "client " + MY_ID + "/" + inp # server 1/put,key,value
         print("send to server {}/{}".format(LEADER, inp))
         start = time.time()
-        time.sleep(4)
-        server_sock.send(to_send.encode())
-        message = server_sock.recv(1024).decode()
-        end = time.time()
+        #time.sleep(4)
 
-        print(message, "time:{}".format(end - start))
+        RECEIVED = False
+        TIMEOUT = 20
+        t = threading.Thread(target=timer)
+        server_sock.send(to_send.encode())
+        t.start()
+        t.join(timeout=TIMEOUT)
+        if RECEIVED == False:
+            print("timeout")
+        end = time.time()
+        print("receive from " + MESSAGE)
+        print("time used: {}".format(end - start))
         #server_sock.settimeout(6) # 6s to time out
         '''
         try:

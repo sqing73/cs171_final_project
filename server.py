@@ -126,6 +126,9 @@ def receive_message(server_receive, lock):
                             MYVAL = val
                             to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, block_info)
                             send_message(to_send)
+            elif operation[0] == "leader":
+                if LEADER == MY_ID:
+                    to_send = "server {}/I am leader and I am "
             lock.release()
         elif cmd == "accept":
             pass
@@ -149,7 +152,7 @@ def receive_message(server_receive, lock):
                 lock.acquire()
                 COUNTACC += 1
                 # reach majority, append block to file 
-                if COUNTACC >= 3:
+                if COUNTACC >= 2:
                     block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"], True)
                     
                     BLOCKCHAIN.append(block)
@@ -303,7 +306,7 @@ def send_message(message, receiver_id = "all", to_client = False):
     global SOCKETS_SEND
     global SOCKETS_CLIENTS
     # send message to servers
-    time.sleep(4)
+    time.sleep(2)
     if not to_client:
         if receiver_id == "all":
             servers = list(SOCKETS_SEND.values())

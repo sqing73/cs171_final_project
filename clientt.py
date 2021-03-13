@@ -2,11 +2,13 @@ import socket
 import sys
 import time
 server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_sock.settimeout(2)
-server_sock.connect((socket.gethostname(), 2192))
+#server_sock.settimeout(2)
+server_sock.connect((socket.gethostname(), 2196))
 a = 0
-while a < 10:
-    time.sleep(2)
+i = 2
+while a < 3:
+    time.sleep(i)
+    """
     try:
         server_sock.send("connected".encode())
         a+=1
@@ -18,3 +20,7 @@ while a < 10:
             print("ddd") 
             server_sock.close()
             sys.exit() 
+    """
+    server_sock.send("connect".encode())
+    i += 2
+    a +=1

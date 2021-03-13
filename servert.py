@@ -1,17 +1,19 @@
 import socket
 import sys
-'''
+
 my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-my_socket.bind((socket.gethostname(), 2192))
+my_socket.bind((socket.gethostname(), 2196))
 my_socket.listen(32)
 c, add = my_socket.accept()
-#c.settimeout(1)
+i = 3
+
 while True:
+    c.settimeout(i)
     m = c.recv(1024)
     print(m)
-    sys.exit()
-
+    #i += 3
+"""
     try:
         m = c.recv(1024)
         if not m:
@@ -24,7 +26,4 @@ while True:
         print("DDD")
         c.close()
         sys.exit()
-'''
-s = ""
-if s == "":
-    print(1)
+"""
