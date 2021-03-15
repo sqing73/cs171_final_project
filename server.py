@@ -18,19 +18,26 @@ BALLOT = [0, 0, 0]     # <seq_num, process_id, depth>
 LINKS = {}              # which links are connected
 
 LEADER = "5"            # current leader, set to 5 at beginning
-ACCEPTNUM = []
+ACCEPTNUM = [0 ,0, 0]
 ACCEPTVAL = ""
 COUNTACC = 0            # count number of acceptors
 COUNTPRO = 0            # count number of promise
 MYVAL = ""              # sender1(_sender2)/block_info
-DECIDING = None
+DECIDING = None         # in deciding next val
+DECIDINGL = False       # in deciding next leader
+DEPTHS = {}             # store depth of each server in phase 1
+CLIENT = ""             # client who starts leader phase
 # commands for communication between servers, no commands between client and server
-CMD = ["forward", "accept", "accepted"]
-FORMATS = {"forward":"server {}/forward/server {},client {}/{}",# sender id, requestor1 id, requestor2 id, operation
+FORMATS = {"forward":"server {}/forward/server {}_client {}/{}",# sender id, requestor1 id, requestor2 id, operation
             "accept":"server {}/accept/{}/{}/{}",               # sender id, ballot, (requestors, block_info) val
             "accepted":"server {}/accepted/{}/{}/{}",           # sender id, accpet ballot, (requestors, block_info) val
             "reply":"server {}/reply/{}/{}",                    # sender id, requestors, reply
-            "decide":"server {}/decide/{}/{}/{}"                # sender id, ballot, (requestors, block_info) val
+            "decide":"server {}/decide/{}/{}/{}",               # sender id, ballot, (requestors, block_info) val
+            "prepare":"server {}/prepare/{}",                   # sender id, ballot
+            "promise":"server {}/promise/{}/{}/{}/{}",          # sender id, ballot, acceptnum, (requestors, block_info) acceptval 
+            "chain":"server {}/chain",                          # sender id
+            "rechain":"server {}/rechain/{}",                   # sender id, all block info
+            "update":"server {}/update/{}"                      # sender id, all block info
         }
 def receive_message(server_receive, lock):
     #global SOCKETS_RECEIVE
@@ -49,6 +56,11 @@ def receive_message(server_receive, lock):
     global FORMATS
     global STORE
     global COUNTACC
+    global COUNTPRO
+    global DECIDINGL
+    global DEPTHS
+    global CLIENT
+    global LINKS
     while True:
         # from sender: sender id/cmd/ballot/requestors/val
         # requestors = requestor1 requestor2
@@ -56,7 +68,7 @@ def receive_message(server_receive, lock):
         # val = {"NONCE": , "OPERATION": , "ID": , "HASH": }
         # from client: client id/operation:put,key,value,id or get,key,id or leader 
         m = server_receive.recv(1024).decode()
-        print("receive from " + m)
+        #print("receive from " + m + "\n")
         message = m.split("/")
         # for confirm client id
         # format: client client_id/id
@@ -64,6 +76,14 @@ def receive_message(server_receive, lock):
         sender_id = sender[1]
         sender_type = sender[0]
         cmd = message[1]
+        if sender_type == "server" and LINKS[sender_id] == False:
+            m = ""
+            message = ["", ""]
+            sender_type = ""
+            sender_id = ""
+            cmd = ""
+        if m != "":
+            print("receive from " + m + "\n")
         if message[1] == "id": # client 1, id
             if sender_type == "client":
                 SOCKETS_CLIENTS[sender_id] = server_receive
@@ -84,28 +104,28 @@ def receive_message(server_receive, lock):
                 else:
                     # I am leader
                     # check if this operation is already in block chain
-                    # if in, don't start the accept again 
+                    # if in, don't append to the queue and start phase2 directly 
+                    
                     stored = False
                     operation_id = operation[-1]
+                    storeblock = None
                     for block in BLOCKCHAIN:
                         if operation_id == block.op_id:
                             stored = True
+                            storeblock = block
                             break
-                    if not stored:
-                       
+                    
+                    requestors = ""
+                    block_info = ""
+                    val = ""
+                    if not stored:   
                         # push operation to queue 
                         # maybe from a client direcly or forwarded by another server
-                        requestors = ""
                         if len(message) == 2:
-                            requestors = message[0]
+                            requestors = "server {}_".format(MY_ID) + message[0]
                         else:
-                            requestors = message[2]
+                            requestors = message[-2]
                         op = message[-1]
-
-                        #requestors, block_info = generate_value(requestors, op)
-                        # use _ to partition two requestors
-                        requestors = requestors.split(",")
-                        requestors = "_".join(requestors)
                         # convert operation to block info
                         # if there are operation in queue ahead of this one, its hash should be previous one's
                         # if no, its hash should be last one in blockchain
@@ -118,20 +138,129 @@ def receive_message(server_receive, lock):
                             prev_hash = BLOCKCHAIN[-1].after_hash
                         block = Block(prev_hash, op, operation_id)
                         block_info = block.toString()
-
                         val = requestors + "/" + block_info
                         OPERATIONS.append(val)
-                        if not DECIDING:
-                            DECIDING = operation_id
-                            MYVAL = val
-                            to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, block_info)
-                            send_message(to_send)
+                    else:
+                        # if it is already stored, then its val is in myval
+                        requestors = MYVAL.split("/")[0]
+                        block_info = MYVAL.split("/")[1]
+                        val = MYVAL
+                    if not DECIDING:
+                        DECIDING = operation_id
+                        MYVAL = val
+                        #print(111)
+                        to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, block_info)
+                        send_message(to_send)
+            # client time out, ask me to become leader
             elif operation[0] == "leader":
+                # I am lader, no need to start phase1, either I am partitioned or too many operations in queue
+                # ask client to request another one to become leader
                 if LEADER == MY_ID:
-                    to_send = "server {}/I am leader and I am "
+                    to_send = "server {}/other".format(MY_ID)
+                    send_message(to_send, sender_id, True)
+                else:
+                    # I am not leader, start phase1, try to become leader
+                    # update ballot
+                    BALLOT[2] = len(BLOCKCHAIN)-1
+                    BALLOT[1] = MY_ID
+                    BALLOT[0] += 1
+                    CLIENT = sender_id
+                    to_send = FORMATS["prepare"].format(MY_ID, ballot_toString(BALLOT))
+                    COUNTPRO = 0
+                    DECIDINGL = True
+                    DEPTHS.clear()
+                    send_message(to_send)
+            lock.release()            
+        elif  cmd == "prepare":
+            lock.acquire()
+            bal = string_toBallot(message[2])
+            if compare_ballot(BALLOT, bal):
+                # if I am in phase 1 to compete for leader, stop it
+                # if I am processng some message, stop it
+                DECIDINGL = False
+                BALLOT = bal
+                LEADER = sender_id
+                DECIDING = False
+                accept_v= ACCEPTVAL.split("/")
+                accept_r = ""
+                accept_b = ""
+                if ACCEPTVAL != "":
+                    accept_r = accept_v[0]
+                    accept_b = accept_v[1]
+                to_send = FORMATS["promise"].format(MY_ID, ballot_toString(BALLOT), ballot_toString(ACCEPTNUM), accept_r, accept_b)
+                send_message(to_send, sender_id)
             lock.release()
+        elif cmd == "promise":
+            lock.acquire()
+            aval = message[-2] + "/" + message[-1]
+            anum = message[-3]
+            if  aval != "/":
+                MYVAL = aval
+            b = string_toBallot(message[2])
+            DEPTHS[sender_id] = b[2]
+            if DECIDINGL:
+                COUNTPRO += 1
+                # reach majority ask the server with most depth to send its chain
+                if COUNTPRO >= 2:
+                    DECIDINGL = False
+                    LEADER = MY_ID
+                    d = list(DEPTHS.values())
+                    maxd = max(d)
+                    max_id = 0
+                    for key in DEPTHS:
+                        if DEPTHS[key] == maxd:
+                            max_id = key
+                    to_send = FORMATS["chain"].format(MY_ID)
+                    send_message(to_send, max_id)
+            lock.release()
+        elif cmd == "chain":
+            # I have the longest chain, send my chain to leader
+            block_infos = ""
+            for i in range(len(BLOCKCHAIN)):
+                if i != 0:
+                    block_infos += "_" + BLOCKCHAIN[i].toString()
+                else:
+                    block_infos += BLOCKCHAIN[i].toString()
+            to_send = FORMATS["rechain"].format(MY_ID, block_infos)
+            send_message(to_send, sender_id)
+        elif cmd == "rechain":
+            lock.acquire()
+            block_infos = message[-1].split("_")
+            #print(block_infos[0])
+            BLOCKCHAIN.clear()
+            for b in block_infos:
+                #print(b)
+                block_info = json.loads(b)
+                block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"], block_info["DECIDED"])
+                BLOCKCHAIN.append(block)
+            update_chain_file()
+            # tell all servers to update chain
+            to_send = FORMATS["update"].format(MY_ID, message[-1])
+            send_message(to_send)
+            to_send = "server {}/success".format(MY_ID)
+            print(CLIENT)
+            send_message(to_send, CLIENT, True)
+            # start pahse 2 to accept myval, else wait for
+            ''' 
+            if MYVAL != "":
+                requestors = MYVAL.split("/")[0]
+                op = MYVAL.split("/")[1]
+                to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, op)
+            '''
+            lock.release()
+        elif cmd == "update":
+            # update chain 
+            lock.acquire()
+            BLOCKCHAIN.clear()
+            block_infos = message[-1].split("_")
+            for b in block_infos:
+                block_info = json.loads(b)
+                block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"], block_info["DECIDED"])
+                BLOCKCHAIN.append(block)
+            update_chain_file()
+            lock.release()
+
         elif cmd == "accept":
-            pass
             b = string_toBallot(message[2])
             if compare_ballot(BALLOT, b):
                 lock.acquire()
@@ -140,9 +269,15 @@ def receive_message(server_receive, lock):
                 ACCEPTVAL = v
                 # create a new block and tag it as tentative
                 block_info = json.loads(message[-1])
-                block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"])
-                BLOCKCHAIN.append(block)
-                update_chain_file()
+                # if this block is alread in chain, dont store it again
+                stored = False
+                for block in BLOCKCHAIN:
+                    if block_info["ID"] == block.op_id:
+                        stored = True
+                if not stored:
+                    block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"])
+                    BLOCKCHAIN.append(block)
+                    update_chain_file()
                 to_send = FORMATS["accepted"].format(MY_ID, ballot_toString(ACCEPTNUM), message[-2],message[-1])
                 send_message(to_send, sender_id)
                 lock.release()
@@ -153,10 +288,19 @@ def receive_message(server_receive, lock):
                 COUNTACC += 1
                 # reach majority, append block to file 
                 if COUNTACC >= 2:
-                    block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"], True)
-                    
-                    BLOCKCHAIN.append(block)
-                    OPERATIONS.pop(0)
+                    # check if the val is already stored
+                    stored = False
+                    operation_id = block_info["ID"]
+                    storeblock = None
+                    for block in BLOCKCHAIN:
+                        if operation_id == block.op_id:
+                            stored = True
+                            storeblock = block
+                            break
+                    if not stored:
+                        block = Block(block_info["HASH"], block_info["OPERATION"], block_info["ID"], block_info["NONCE"], True)  
+                        BLOCKCHAIN.append(block)
+                        OPERATIONS.pop(0)
                     DECIDING = None
                     COUNTACC = 0
                     MYVAL = ""
@@ -176,16 +320,20 @@ def receive_message(server_receive, lock):
                             reply = "{}'s phone number:{}.".format(key, STORE[key])
                         else:
                             reply = "{}'s phone number cannot be found.".format(key)
+
                     requestors = message[-2].split("_")
-                    requestor1 = requestors[0]
-                    # if request is from a server, send reply to a server first then to the client
-                    if len(requestors) == 2:
-                        to_send = FORMATS["reply"].format(MY_ID, message[-2], reply)
-                        send_message(to_send, requestor1.split()[1])
-                    # send reply to client directly
-                    else:
+                    requestor1 = requestors[0].split()[1]
+                    requestor2 = requestors[1].split()[1]
+                    if requestor1 == MY_ID:
+                        # send to client directly
                         to_send = "server {}/{}".format(MY_ID, reply)
-                        send_message(to_send, requestor1.split()[1], True)
+                        send_message(to_send, requestor2, True)
+
+                    else:
+                        # if request is from a server, send reply to a server first then to the client
+                        to_send = FORMATS["reply"].format(MY_ID, message[-2], reply)
+                        send_message(to_send, requestor1)
+
                     # send decide to all other servers
                     b = message[2]
                     to_send = FORMATS["decide"].format(MY_ID, b, message[-2], message[-1])
@@ -198,8 +346,11 @@ def receive_message(server_receive, lock):
                         b = json.loads(block_info)
                         DECIDING = b["ID"]
                         MYVAL = val
+                        #print(2222)
                         to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, block_info)
                         send_message(to_send)
+                    else:
+                        DECIDING = None
                 lock.release()
         elif cmd == "reply":
             # a request is sent through me, I reply to client
@@ -224,46 +375,6 @@ def receive_message(server_receive, lock):
             update_chain_file()
 
 
-
-
-
-            
-        # I try to become leader, phase1
-        '''
-        elif operation[0] == "leader":
-
-            BALLOT[0] += 1
-            to_send = "server {}/prepare/{} {} {}".format(MY_ID, BALLOT[0], BALLOT[1], BALLOT[2])
-            send_message(to_send.encode())
-            COUNTING = True
-        elif operation[0] == "prepare":
-            b = message[2].split()
-            bal = [int(b[0]), b[1], int(b[2])]
-            if compare_ballot(BALLOT, bal):
-                BALLOT = bal
-                to_send = "server {}/promise/{}/{}/{}".format(MY_ID, message[2], ballot_toString(ACCEPTNUM), ACCEPTVAL)
-                LEADER =  sender_id
-                send_message(to_send, receiver_id=LEADER)
-        # collect all promise for 
-        #
-        #
-        #
-        #i give up, complete phase 2 first
-        elif operation[0] == "promise":
-            if COUNTING:
-                COUNT += 1
-                # if receive from all nodes of a quorum, 
-                # leader successful, start phase 2
-                if COUNT == 3:
-                    COUNTING = False
-                    COUNT = 0
-                    MYVAL = message[2]
-        elif operation[0] == "fail":
-            LINKS[sender_id] = False
-        elif operation[0] == "fix":
-            LINKS[sender_id] = True
-        lock.release()
-'''
 # thread for clearing operations in queue and start from MYVAL
 def generate_value(requestors, operation):
     global BLOCKCHAIN
@@ -305,16 +416,19 @@ def update_chain_file():
 def send_message(message, receiver_id = "all", to_client = False):
     global SOCKETS_SEND
     global SOCKETS_CLIENTS
+    global LINKS
     # send message to servers
     time.sleep(2)
     if not to_client:
         if receiver_id == "all":
-            servers = list(SOCKETS_SEND.values())
+            servers = list(SOCKETS_SEND.keys())
             for server in servers:
-                server.send(message.encode())
+                if LINKS[server]:
+                    SOCKETS_SEND[server].send(message.encode())
         else:
-            server = SOCKETS_SEND[receiver_id]
-            server.send(message.encode())
+            if LINKS[receiver_id]:
+                server = SOCKETS_SEND[receiver_id]
+                server.send(message.encode())
     else:
         client = SOCKETS_CLIENTS[receiver_id]
         client.send(message.encode())
@@ -322,41 +436,28 @@ def send_message(message, receiver_id = "all", to_client = False):
 
 def handle_input():
     global MY_ID
+    global OPERATIONS
+    global LINKS
+    global STORE
+    global LEADER
     while True:
-        '''
-        inp = input("Usage: send <server/client> <id/all>/message\n")
-        inp = inp.split("/")
-        cmd = inp[0] # send client 1
-        message = inp[1]
-        cmd = cmd.split()
-        receiver_id = cmd[2]
-        to_client = False
-        if cmd[1] == "client":
-            to_client = True
-        to_send = "server " + MY_ID + "/" + message # server 1/put s : h
-        print("send to {} {}/{}".format(cmd[1], cmd[2], message))
-        send_message(to_send, receiver_id, to_client)
-        '''
-        global OPERATIONS
-        global LINKS
-        inp = input("please input: cmd,id")
+        inp = input("please input: ")
         inp = inp.split(",")
         if inp[0] == "queue":
-            print(OPERATIONS)
+            if MY_ID != LEADER:
+                print("I am not leader, I don't have queue")
+            else:
+                print(OPERATIONS)
         elif inp[0] == "failLink":
             LINKS[inp[1]] = False
-            # ask dest to fail
-            message = "server {}/fail".format(MY_ID)
-            id = inp[1]
-            send_message(message, id)
         elif inp[0] == "fixLink":
             LINKS[inp[1]] = True
-            # ask dest to fix
-            message = "server {}/fix".format(MY_ID)
-            id = inp[1]
-            send_message(message, id)
         elif inp[0] == "failProcess":
             pass
+        elif inp[0] == "leader":
+            print(LEADER)
+        elif inp[0] == "store":
+            print(STORE)
         else:
             print("wrong input")
         

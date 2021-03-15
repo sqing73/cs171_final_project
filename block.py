@@ -13,7 +13,7 @@ class Block:
             self.generate_nonce()
         cont =  (str(self.operation) + str(self.nonce) + str(self.previous_hash)).encode('utf-8')
         self.after_hash = hashlib.sha256(cont).hexdigest()
-        self.info = {"NONCE":self.nonce, "OPERATION":self.operation, "ID":self.op_id, "HASH":self.previous_hash}
+        self.info = {"NONCE":self.nonce, "OPERATION":self.operation, "ID":self.op_id, "HASH":self.previous_hash, "DECIDED":self.decided}
 
     @staticmethod
     def get_genesis():

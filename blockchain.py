@@ -58,8 +58,6 @@ elif sys.argv[1] == "read":
         print ("{}:{}".format(key, store[key]))
 
 '''
-d = {'1':"shit", "2":"fuck"}
-s = json.dumps(d)
-t = "fff"
-if not t:
-    print(1)
+d = '{"NONCE": "7", "OPERATION": "get,Alice,1012", "ID": "1012", "HASH": "4e972b4a1a2228eae7fac365c9cd5bf2d634a390527db0d60a928e2c6c08f72c", "DECIDED": false}'
+h = json.loads(d)
+print(h["DECIDED"])

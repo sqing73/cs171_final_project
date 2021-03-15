@@ -1,135 +1,23 @@
 [
     {
-        "NONCE": "2",
-        "OPERATION": "put,Qing,3421,993",
+        "NONCE": "1",
+        "OPERATION": "put,Alice,99983,856",
         "HASH": "13715f6c8b48ed1b00f509ca29bc826bd04fd6f1ce8d8ebe27fb286312ce3ba1",
         "DECIDED": true,
-        "ID": "993"
-    },
-    {
-        "NONCE": "7",
-        "OPERATION": "get,Qing,165",
-        "HASH": "c00e5c7ae05686f5f51a1870495ec3a577ee52c45521d4879d4265e54ac8e185",
-        "DECIDED": true,
-        "ID": "165"
-    },
-    {
-        "NONCE": "3",
-        "OPERATION": "get,Alice,921",
-        "HASH": "06f0cc5cdd03ad6b1699b3876544be82c6248854140cad1b0adc572e673f11d7",
-        "DECIDED": true,
-        "ID": "921"
+        "ID": "856"
     },
     {
         "NONCE": "1",
-        "OPERATION": "put,Alice,1231312,546",
-        "HASH": "91fac3b0c3574ede5709a8f57efd62b69e7192ea925acc644677e0dd83524032",
+        "OPERATION": "get,Alice,262",
+        "HASH": "917936c51f6d83fd6e0c09716521034cc901c6ad863961e82eb479020e8048fa",
         "DECIDED": true,
-        "ID": "546"
-    },
-    {
-        "NONCE": "6",
-        "OPERATION": "get,Alice,934",
-        "HASH": "87f7291d3831c4fcefe25ea5a331f2deefbb8002e4d157b9bb491eec520f3ce1",
-        "DECIDED": true,
-        "ID": "934"
-    },
-    {
-        "NONCE": "1",
-        "OPERATION": "get,DDD,999",
-        "HASH": "ff9bd600f7bd83d2ae65dee482f20aa0d6644a34299952224e55e62187845f2d",
-        "DECIDED": true,
-        "ID": "999"
-    },
-    {
-        "NONCE": "6",
-        "OPERATION": "get,Qing,602",
-        "HASH": "a7478de34a8900e35665d8b45e824c8e00087056b25e4f206ed5e4ff03b417be",
-        "DECIDED": true,
-        "ID": "602"
-    },
-    {
-        "NONCE": "4",
-        "OPERATION": "get,Alice,886",
-        "HASH": "e1c953d6d11a59edee4519aa562d02db34d2e644d2a39013aa9907d375332bf6",
-        "DECIDED": true,
-        "ID": "886"
-    },
-    {
-        "NONCE": "9",
-        "OPERATION": "put,1,1,363",
-        "HASH": "548867f0fac0c40d1e8342086b718571e0f6ca2db30669b2506d793fb8d306e0",
-        "DECIDED": true,
-        "ID": "363"
-    },
-    {
-        "NONCE": "15",
-        "OPERATION": "get,Alice,386",
-        "HASH": "7c454415ed21d1ae045c0fff9d0ebb719dd2ca7ee9862646b91a905b3d51bd6e",
-        "DECIDED": true,
-        "ID": "386"
-    },
-    {
-        "NONCE": "8",
-        "OPERATION": "get,Alice,85",
-        "HASH": "bacd84b302e610f1bc9962082110a7ec9fb5526a56217ff956f6a94ec1a3eda7",
-        "DECIDED": true,
-        "ID": "85"
-    },
-    {
-        "NONCE": "1",
-        "OPERATION": "get,A,249",
-        "HASH": "58505bf1225096be1f337aa52a1c47f4b8f07f81dd0e5d5e90d99a6a1e8aea03",
-        "DECIDED": true,
-        "ID": "249"
-    },
-    {
-        "NONCE": "6",
-        "OPERATION": "get,A,409",
-        "HASH": "b88d2c075c5143dee187e6501a9b93f5de4ba2a2bb37067aac2b5dd4287f87e3",
-        "DECIDED": true,
-        "ID": "409"
-    },
-    {
-        "NONCE": "11",
-        "OPERATION": "get,ALice,508",
-        "HASH": "892f1e33fd067688da43a0557f33464707543024871abcc9514897566d5f520a",
-        "DECIDED": true,
-        "ID": "508"
+        "ID": "262"
     },
     {
         "NONCE": "5",
-        "OPERATION": "get,SSS,428",
-        "HASH": "3c0a2c651d4ba986250b0f03a869c6ea3a5b188dcd21dae74df443c164c45233",
+        "OPERATION": "get,Alice],694",
+        "HASH": "4007403028818527877a77bc8cdcefed4e4aa1d66be88953b3f6a0c7ed5b5fbe",
         "DECIDED": true,
-        "ID": "428"
-    },
-    {
-        "NONCE": "3",
-        "OPERATION": "get,Alice,1019",
-        "HASH": "613ae9740b947042c39bfcf59671e4242617678117ae519722f0febdec6d6ff6",
-        "DECIDED": true,
-        "ID": "1019"
-    },
-    {
-        "NONCE": "9",
-        "OPERATION": "get,A,327",
-        "HASH": "df924426b9b81ee908b27acc83ec009e22e40bb1a24a74cf4ab5eb763d424a06",
-        "DECIDED": true,
-        "ID": "327"
-    },
-    {
-        "NONCE": "1",
-        "OPERATION": "get,Alice,713",
-        "HASH": "52568ecaac25a163bb3933dc9ddf4e5bc39c046723d178e124f694180eb4342e",
-        "DECIDED": true,
-        "ID": "713"
-    },
-    {
-        "NONCE": "2",
-        "OPERATION": "get,Alice,315",
-        "HASH": "9f3bea3d7ce26fa82dd67d1859e1bd5d2f57690054355b2c5dd5f6ae15662398",
-        "DECIDED": true,
-        "ID": "315"
+        "ID": "694"
     }
 ]
