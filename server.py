@@ -39,6 +39,10 @@ FORMATS = {"forward":"server {}/forward/server {}_client {}/{}",# sender id, req
             "rechain":"server {}/rechain/{}",                   # sender id, all block info
             "update":"server {}/update/{}"                      # sender id, all block info
         }
+CONFIG = {}             # id, ports
+WORKING = False
+MY_SOCKET = None
+SOCKETS_RECEIVE = []
 def receive_message(server_receive, lock):
     #global SOCKETS_RECEIVE
     global SOCKETS_CLIENTS
@@ -61,13 +65,17 @@ def receive_message(server_receive, lock):
     global DEPTHS
     global CLIENT
     global LINKS
+    global CONFIG
+    global SOCKETS_SEND
+    global WORKING
+    global SOCKETS_RECEIVE
     while True:
         # from sender: sender id/cmd/ballot/requestors/val
         # requestors = requestor1 requestor2
         # ballot = seq_num process_id depth
         # val = {"NONCE": , "OPERATION": , "ID": , "HASH": }
         # from client: client id/operation:put,key,value,id or get,key,id or leader 
-        m = server_receive.recv(1024).decode()
+        m = server_receive.recv(2024).decode()
         #print("receive from " + m + "\n")
         message = m.split("/")
         # for confirm client id
@@ -87,10 +95,22 @@ def receive_message(server_receive, lock):
         if message[1] == "id": # client 1, id
             if sender_type == "client":
                 SOCKETS_CLIENTS[sender_id] = server_receive
-                #send_message("shit", sender_id, True)
-            print(message[0] + " connected")
+                print(message[0] + " connected")
+            else:
+                # first time connect
+                lock.acquire()
+                if len(SOCKETS_RECEIVE)<= 4:
+                    print(message[0] + " connected")   
+                # some process failed and reconnect
+                else:
+                    server_send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    server_send.connect((socket.gethostname(), config[sender_id]))
+                    server_send.send(("server " + MY_ID + "/id").encode())
+                    SOCKETS_SEND[sender_id] = server_send
+                    print(message[0] + " reconnected")
+                lock.release()
             next
-        # a message from or originally from a client to request an operation
+        # a message from or originally from a client to request an oper ation
         if sender_type == "client" or cmd == "forward":
             lock.acquire()
             operation = message[-1]
@@ -241,12 +261,6 @@ def receive_message(server_receive, lock):
             print(CLIENT)
             send_message(to_send, CLIENT, True)
             # start pahse 2 to accept myval, else wait for
-            ''' 
-            if MYVAL != "":
-                requestors = MYVAL.split("/")[0]
-                op = MYVAL.split("/")[1]
-                to_send = FORMATS["accept"].format(MY_ID, ballot_toString(BALLOT), requestors, op)
-            '''
             lock.release()
         elif cmd == "update":
             # update chain 
@@ -440,6 +454,10 @@ def handle_input():
     global LINKS
     global STORE
     global LEADER
+    global MY_SOCKET
+    global SOCKETS_CLIENTS
+    global SOCKETS_RECEIVE
+    global SOCKETS_SEND
     while True:
         inp = input("please input: ")
         inp = inp.split(",")
@@ -475,14 +493,18 @@ if __name__ == "__main__":
     with open("config.json", "r") as f:
         config = json.load(f)
         f.close()
+    CONFIG = config
     
     others = ["1", "2", "3", "4", "5"]
     others.remove(MY_ID)
     # listen to other servers
     my_port = config[MY_ID]
     my_socket = socket.socket()
+    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     my_socket.bind((socket.gethostname(), my_port))
     my_socket.listen(32)
+
+    MY_SOCKET = my_socket
 
     # reconstruct blockchain from disk
     chain_file = "blockchain{}.json".format(MY_ID)
@@ -532,5 +554,6 @@ if __name__ == "__main__":
     lock = threading.Lock()
     while True:
         server_receive, address = my_socket.accept()
+        SOCKETS_RECEIVE.append(server_receive)
         threading.Thread(target=receive_message, args=(server_receive, lock,)).start()
 

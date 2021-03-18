@@ -7,17 +7,24 @@
         "ID": "856"
     },
     {
-        "NONCE": "1",
-        "OPERATION": "get,Alice,262",
+        "NONCE": "18",
+        "OPERATION": "put,333,1232,1089",
         "HASH": "917936c51f6d83fd6e0c09716521034cc901c6ad863961e82eb479020e8048fa",
         "DECIDED": true,
-        "ID": "262"
+        "ID": "1089"
     },
     {
-        "NONCE": "5",
-        "OPERATION": "get,Alice],694",
-        "HASH": "4007403028818527877a77bc8cdcefed4e4aa1d66be88953b3f6a0c7ed5b5fbe",
+        "NONCE": "11",
+        "OPERATION": "put,4342,43343,472",
+        "HASH": "537552c32ee2a72d92fc6e96ff4e2e847cc89078926b27cdcb2594e37e3ab072",
         "DECIDED": true,
-        "ID": "694"
+        "ID": "472"
+    },
+    {
+        "NONCE": "3",
+        "OPERATION": "get,4342,8437,244",
+        "HASH": "5cc05fe5f6de020534a55338d20ad2f3bdefb86ae816e2f7beef19690ea4fd77",
+        "DECIDED": true,
+        "ID": "244"
     }
 ]
